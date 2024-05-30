@@ -125,7 +125,7 @@ void CheckResult(const char *sExpression, double dExpectedResult)
 		printf("Error in Formula.\n");
 	}
 	else{
-		char *sSuffix = "";
+		const char *sSuffix = "";
 		if(dResult != dExpectedResult)
 		{
 			printf("[%s] = %.10f %s\n", sExpression, dResult, "(INCORRECT)");
