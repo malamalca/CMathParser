@@ -2,12 +2,48 @@
 #define _CMathParser_CPP
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <float.h>
+#include <limits.h>
+
+#if defined (_WIN32)
+
 #include <Windows.H>
-#include <StdIO.H>
-#include <StdLib.H>
-#include <Math.H>
-#include <Float.H>
-#include <Limits.H>
+
+#else // NOT _WIN32
+
+#include <string.h>
+#include <stdarg.h>
+
+// Windows-specific functions
+#define _strcmpi strcasecmp
+#define _fcvt_s(buf, sz, value, count, dec, sign) fcvt_r(value, count, dec, sign, buf, sz)
+#define _itoa_s(value, buf, sz, radix) snprintf(buf, sz, "%d", value)
+#define _isnan isnan
+#define _finite isfinite
+
+// The function to get the number of characters needed to print the args
+int _vscprintf(const char* fmt, va_list args) {
+	int retval;
+	va_list argcopy;
+	va_copy(argcopy, args);
+	retval = vsnprintf(NULL, 0, fmt, argcopy);
+	va_end(argcopy);
+	return retval;
+}
+
+// locale argument is ignored, since the function is only called with NULL locale
+#define _vsprintf_s_l(buf, sz, fmt, locale, args) vsnprintf(buf, sz, fmt, args)
+
+// These functions are available since C11, but not in any versions of C++
+// Generally we can just use C99 versions available everywhere
+#define sprintf_s snprintf
+#define strcpy_s(dest, sz, src) strncpy(dest, src, sz)
+#define memcpy_s(dest, destsz, src, count) memcpy(dest, src, count)
+
+#endif // NOT _WIN32
 
 #include "CMathParser.h"
 
