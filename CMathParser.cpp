@@ -20,7 +20,7 @@
 // Windows-specific functions
 #define _strcmpi strcasecmp
 #define _fcvt_s(buf, sz, value, count, dec, sign) fcvt_r(value, count, dec, sign, buf, sz)
-#define _itoa_s(value, buf, sz, radix) snprintf(buf, sz, "%d", value)
+#define _itoa_s(value, buf, sz, radix) (snprintf(buf, sz, "%d", value) < 0)
 #define _isnan isnan
 #define _finite isfinite
 
