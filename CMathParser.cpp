@@ -19,7 +19,10 @@
 
 // Windows-specific functions
 #define _strcmpi strcasecmp
+// convert float to string, use analagous POSIX function, just with different args order
 #define _fcvt_s(buf, sz, value, count, dec, sign) fcvt_r(value, count, dec, sign, buf, sz)
+// convert int to string, just use snprintf. Ignore radix, since it's always 10.
+// _itoa_s returns non-0 value when there is an error, snprintf returns negative value in such case
 #define _itoa_s(value, buf, sz, radix) (snprintf(buf, sz, "%d", value) < 0)
 #define _isnan isnan
 #define _finite isfinite
