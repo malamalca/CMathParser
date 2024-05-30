@@ -2,9 +2,20 @@
 #define _ENTRY_CPP
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#include <stdio.h>
+#include <stdlib.h>
+
+#if defined (_WIN32)
+
 #include <Windows.H>
-#include <Stdio.H>
-#include <Stdlib.H>
+
+#else // NOT _WIN32
+
+#include <strings.h>
+
+#define _strcmpi strcasecmp
+
+#endif // NOT _WIN32
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -229,7 +240,9 @@ int main(int argc, char *argv[])
 	CheckResult("10+10-!1", 20);
 	CheckResult("X + Y", 1000);
 
+#if defined (_WIN32)
 	system("pause");
+#endif
 
 	/*
 	char sBuf[1024 * 5];
