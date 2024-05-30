@@ -734,7 +734,7 @@ CMathParser::MathResult CMathParser::CalculateSimpleExpression(MATHINSTANCE *pIn
 	int iOpPos = 0;
 	int iOpSz = 0;
 
-	char *sOp = NULL;
+	const char *sOp = NULL;
 
 	int iRPos = 0;
 	int iWPos = 0;
