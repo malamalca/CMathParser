@@ -16,11 +16,55 @@
 
 #include <string.h>
 #include <stdarg.h>
+#include <stdlib.h>
 
 // Windows-specific functions
 #define _strcmpi strcasecmp
 // convert float to string, use analagous POSIX function, just with different args order
+
+int fcvt_r(double value, int ndigit, int *decpt, int *sign, char buf[], int sz) {
+  char *ret = &buf[0];
+  if (ndigit < 0)
+    ndigit = 0;
+  else if (ndigit > DBL_DECIMAL_DIG)
+    ndigit = DBL_DECIMAL_DIG;
+  if (snprintf(buf, sz, "%#.*f", ndigit, value) <= 0) {
+    //*ret = '\0';
+    buf[0] = '\0';
+    return -1;
+  } else {
+    *sign = 0;
+    if (*ret == '-') {
+      *sign = 1;
+      ++ret;
+    }
+    *decpt = 0;
+    char *pt = strchr(ret, '.');
+    if (pt) {
+      *decpt = pt - ret;
+      memmove(pt, pt + 1, strlen(pt + 1) + 1);
+      if (value != 0.0) {
+        while (*ret == '0') {
+          --(*decpt);
+          ++ret;
+        }
+      } else {
+        *decpt = 0;
+        memmove(ret, ret + 1, strlen(ret));
+      }
+    }
+
+    if (ret != buf) {
+        memmove(buf, ret, strlen(ret) +1 );
+    }
+  }
+  return 0;
+  //return ret;
+}
 #define _fcvt_s(buf, sz, value, count, dec, sign) fcvt_r(value, count, dec, sign, buf, sz)
+
+
+
 // convert int to string, just use snprintf. Ignore radix, since it's always 10.
 // _itoa_s returns non-0 value when there is an error, snprintf returns negative value in such case
 #define _itoa_s(value, buf, sz, radix) (snprintf(buf, sz, "%d", value) < 0)
@@ -597,7 +641,7 @@ CMathParser::MathResult CMathParser::ParseOperator(MATHINSTANCE *pInst, MATHEXPR
 				}
 				else if (sOp[0] == '~')
 				{
-					if ((ErrorCode = this->PerformIntOperation(pInst, atol(sVal2), sOp, NULL)) != ResultOk)
+					if ((ErrorCode = this->PerformIntOperation(pInst, atol(sVal2), sOp, 0)) != ResultOk)
 					{
 						return ErrorCode;
 					}
@@ -733,17 +777,17 @@ CMathParser::MathResult CMathParser::CalculateSimpleExpression(MATHINSTANCE *pIn
 {
 	MathResult ErrorCode = ResultOk;
 
-	int iDivPos = 0;
+	//int iDivPos = 0;
 	int iOpPos = 0;
 	int iOpSz = 0;
 
 	const char *sOp = NULL;
 
-	int iRPos = 0;
-	int iWPos = 0;
+	//int iRPos = 0;
+	//int iWPos = 0;
 
-	int iBegin = 0;
-	int iEnd = 0;
+	//int iBegin = 0;
+	//int iEnd = 0;
 
 	int iOperator = 0;
 
@@ -911,7 +955,7 @@ CMathParser::MathResult CMathParser::CalculateSimpleExpression(MATHINSTANCE *pIn
 			}
 		}
 
-		if ((ErrorCode = this->PerformIntOperation(pInst, atol(pSubExp->Text + 1), "~", NULL)) != ResultOk)
+		if ((ErrorCode = this->PerformIntOperation(pInst, atol(pSubExp->Text + 1), "~", 0)) != ResultOk)
 		{
 			return ErrorCode;
 		}
@@ -1010,7 +1054,7 @@ CMathParser::MathResult CMathParser::AllocateExpression(MATHEXPRESSION* pExp, co
 
 				if (sSource[iRPos] == '(')
 				{
-					double* pOutParameters = NULL;
+					Math_Parameter* pOutParameters = NULL;
 					int iParameterCount = 0;
 
 					double dProcValue = 0;
@@ -1055,7 +1099,7 @@ CMathParser::MathResult CMathParser::AllocateExpression(MATHEXPRESSION* pExp, co
 
 					//Copy the resulting variable value to the expression for further processing.
 					strcpy_s(pExp->Text + pExp->Length, pExp->Allocated - pExp->Length, sVarValue);
-					pExp->Length += strlen(sVarValue);
+					pExp->Length += (int)strlen(sVarValue);
 				}
 				else
 				{
@@ -1084,7 +1128,7 @@ CMathParser::MathResult CMathParser::AllocateExpression(MATHEXPRESSION* pExp, co
 
 					//Copy the resulting variable value to the expression for further processing.
 					strcpy_s(pExp->Text + pExp->Length, pExp->Allocated - pExp->Length, sVarValue);
-					pExp->Length += strlen(sVarValue);
+					pExp->Length += (int)strlen(sVarValue);
 				}
 
 				iRPos--; //We need to let the outer loop determine if we are done yet.
@@ -1119,7 +1163,7 @@ CMathParser::MathResult CMathParser::AllocateExpression(MATHEXPRESSION* pExp, co
 /// <param name="pOutResult"></param>
 /// <returns></returns>
 CMathParser::MathResult CMathParser::ExecuteNativeMethod(
-	const char* sMethodName, double* dParameters, int iParamCount, double* pOutResult)
+	const char* sMethodName, Math_Parameter* dParameters, int iParamCount, double* pOutResult)
 {
 	if (_strcmpi(sMethodName, "NOT") == 0)
 	{
@@ -1128,7 +1172,7 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 			return this->SetError(ResultInvalidToken, "Invalid number of parameters passed to method: %s", sMethodName);
 		}
 
-		*pOutResult = !((long long)dParameters[0]);
+		*pOutResult = !((long long)dParameters[0].DoubleValue);
 	}
 	else if (_strcmpi(sMethodName, "ACOS") == 0)
 	{
@@ -1137,7 +1181,7 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 			return this->SetError(ResultInvalidToken, "Invalid number of parameters passed to method: %s", sMethodName);
 		}
 
-		*pOutResult = acos(dParameters[0]);
+		*pOutResult = acos(dParameters[0].DoubleValue);
 	}
 	else if (_strcmpi(sMethodName, "ASIN") == 0)
 	{
@@ -1146,7 +1190,7 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 			return this->SetError(ResultInvalidToken, "Invalid number of parameters passed to method: %s", sMethodName);
 		}
 
-		*pOutResult = asin(dParameters[0]);
+		*pOutResult = asin(dParameters[0].DoubleValue);
 	}
 	else if (_strcmpi(sMethodName, "ATAN") == 0)
 	{
@@ -1155,7 +1199,7 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 			return this->SetError(ResultInvalidToken, "Invalid number of parameters passed to method: %s", sMethodName);
 		}
 
-		*pOutResult = atan(dParameters[0]);
+		*pOutResult = atan(dParameters[0].DoubleValue);
 	}
 	else if (_strcmpi(sMethodName, "ATAN2") == 0)
 	{
@@ -1164,7 +1208,7 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 			return this->SetError(ResultInvalidToken, "Invalid number of parameters passed to method: %s", sMethodName);
 		}
 
-		*pOutResult = atan2(dParameters[0], dParameters[1]);
+		*pOutResult = atan2(dParameters[0].DoubleValue, dParameters[1].DoubleValue);
 	}
 	else if (_strcmpi(sMethodName, "LDEXP") == 0)
 	{
@@ -1173,7 +1217,7 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 			return this->SetError(ResultInvalidToken, "Invalid number of parameters passed to method: %s", sMethodName);
 		}
 
-		*pOutResult = ldexp(dParameters[0], (int)dParameters[1]);
+		*pOutResult = ldexp(dParameters[0].DoubleValue, (int)dParameters[1].DoubleValue);
 	}
 	else if (_strcmpi(sMethodName, "TAN") == 0)
 	{
@@ -1182,7 +1226,7 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 			return this->SetError(ResultInvalidToken, "Invalid number of parameters passed to method: %s", sMethodName);
 		}
 
-		*pOutResult = tan(dParameters[0]);
+		*pOutResult = tan(dParameters[0].DoubleValue);
 	}
 	else if (_strcmpi(sMethodName, "SIN") == 0)
 	{
@@ -1191,7 +1235,7 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 			return this->SetError(ResultInvalidToken, "Invalid number of parameters passed to method: %s", sMethodName);
 		}
 
-		*pOutResult = sin(dParameters[0]);
+		*pOutResult = sin(dParameters[0].DoubleValue);
 	}
 	else if (_strcmpi(sMethodName, "COS") == 0)
 	{
@@ -1200,7 +1244,7 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 			return this->SetError(ResultInvalidToken, "Invalid number of parameters passed to method: %s", sMethodName);
 		}
 
-		*pOutResult = cos(dParameters[0]);
+		*pOutResult = cos(dParameters[0].DoubleValue);
 	}
 	else if (_strcmpi(sMethodName, "ATAN") == 0)
 	{
@@ -1209,7 +1253,7 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 			return this->SetError(ResultInvalidToken, "Invalid number of parameters passed to method: %s", sMethodName);
 		}
 
-		*pOutResult = atan(dParameters[0]);
+		*pOutResult = atan(dParameters[0].DoubleValue);
 	}
 	else if (_strcmpi(sMethodName, "ABS") == 0)
 	{
@@ -1218,7 +1262,7 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 			return this->SetError(ResultInvalidToken, "Invalid number of parameters passed to method: %s", sMethodName);
 		}
 
-		*pOutResult = fabs(dParameters[0]);
+		*pOutResult = fabs(dParameters[0].DoubleValue);
 	}
 	else if (_strcmpi(sMethodName, "SQRT") == 0)
 	{
@@ -1227,7 +1271,7 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 			return this->SetError(ResultInvalidToken, "Invalid number of parameters passed to method: %s", sMethodName);
 		}
 
-		*pOutResult = sqrt(dParameters[0]);
+		*pOutResult = sqrt(dParameters[0].DoubleValue);
 	}
 	else if (_strcmpi(sMethodName, "POW") == 0)
 	{
@@ -1236,7 +1280,7 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 			return this->SetError(ResultInvalidToken, "Invalid number of parameters passed to method: %s", sMethodName);
 		}
 
-		*pOutResult = pow(dParameters[0], dParameters[1]);
+		*pOutResult = pow(dParameters[0].DoubleValue, dParameters[1].DoubleValue);
 	}
 	else if (_strcmpi(sMethodName, "MODPOW") == 0)
 	{
@@ -1245,7 +1289,7 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 			return this->SetError(ResultInvalidToken, "Invalid number of parameters passed to method: %s", sMethodName);
 		}
 
-		*pOutResult = this->ModPow((long long)dParameters[0], (long long)dParameters[1], (int)dParameters[2]);
+		*pOutResult = this->ModPow((long long)dParameters[0].DoubleValue, (long long)dParameters[1].DoubleValue, (int)dParameters[2].DoubleValue);
 	}
 	else if (_strcmpi(sMethodName, "SINH") == 0)
 	{
@@ -1254,7 +1298,7 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 			return this->SetError(ResultInvalidToken, "Invalid number of parameters passed to method: %s", sMethodName);
 		}
 
-		*pOutResult = sinh(dParameters[0]);
+		*pOutResult = sinh(dParameters[0].DoubleValue);
 	}
 	else if (_strcmpi(sMethodName, "COSH") == 0)
 	{
@@ -1263,7 +1307,7 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 			return this->SetError(ResultInvalidToken, "Invalid number of parameters passed to method: %s", sMethodName);
 		}
 
-		*pOutResult = cosh(dParameters[0]);
+		*pOutResult = cosh(dParameters[0].DoubleValue);
 	}
 	else if (_strcmpi(sMethodName, "TANH") == 0)
 	{
@@ -1272,7 +1316,7 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 			return this->SetError(ResultInvalidToken, "Invalid number of parameters passed to method: %s", sMethodName);
 		}
 
-		*pOutResult = tanh(dParameters[0]);
+		*pOutResult = tanh(dParameters[0].DoubleValue);
 	}
 	else if (_strcmpi(sMethodName, "LOG") == 0)
 	{
@@ -1281,7 +1325,7 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 			return this->SetError(ResultInvalidToken, "Invalid number of parameters passed to method: %s", sMethodName);
 		}
 
-		*pOutResult = log(dParameters[0]);
+		*pOutResult = log(dParameters[0].DoubleValue);
 	}
 	else if (_strcmpi(sMethodName, "LOG10") == 0)
 	{
@@ -1290,7 +1334,7 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 			return this->SetError(ResultInvalidToken, "Invalid number of parameters passed to method: %s", sMethodName);
 		}
 
-		*pOutResult = log10(dParameters[0]);
+		*pOutResult = log10(dParameters[0].DoubleValue);
 	}
 	else if (_strcmpi(sMethodName, "EXP") == 0)
 	{
@@ -1299,7 +1343,7 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 			return this->SetError(ResultInvalidToken, "Invalid number of parameters passed to method: %s", sMethodName);
 		}
 
-		*pOutResult = exp(dParameters[0]);
+		*pOutResult = exp(dParameters[0].DoubleValue);
 	}
 	else if (_strcmpi(sMethodName, "FLOOR") == 0)
 	{
@@ -1308,7 +1352,7 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 			return this->SetError(ResultInvalidToken, "Invalid number of parameters passed to method: %s", sMethodName);
 		}
 
-		*pOutResult = floor(dParameters[0]);
+		*pOutResult = floor(dParameters[0].DoubleValue);
 	}
 	else if (_strcmpi(sMethodName, "CEIL") == 0)
 	{
@@ -1317,7 +1361,7 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 			return this->SetError(ResultInvalidToken, "Invalid number of parameters passed to method: %s", sMethodName);
 		}
 
-		*pOutResult = ceil(dParameters[0]);
+		*pOutResult = ceil(dParameters[0].DoubleValue);
 	}
 	else if (_strcmpi(sMethodName, "SUM") == 0)
 	{
@@ -1330,7 +1374,7 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 
 		for (int i = 0; i < iParamCount; i++)
 		{
-			dSum += dParameters[i];
+			dSum += dParameters[i].DoubleValue;
 		}
 
 		*pOutResult = dSum;
@@ -1346,7 +1390,7 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 
 		for (int i = 0; i < iParamCount; i++)
 		{
-			dSum += dParameters[i];
+			dSum += dParameters[i].DoubleValue;
 		}
 
 		dSum /= iParamCount;
@@ -1360,7 +1404,7 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 CMathParser::MathResult CMathParser::ParseMethodParameters(
-	const char* sSource, int iSourceSz, int* piRPos, double** pOutParameters, int *piOutParamCount)
+	const char* sSource, int iSourceSz, int* piRPos, Math_Parameter** pOutParameters, int *piOutParamCount)
 {
 	int iRPos = *piRPos;
 	int iWPos = 0;
@@ -1389,18 +1433,18 @@ CMathParser::MathResult CMathParser::ParseMethodParameters(
 
 			if (IsNativeMethod(sBuf))
 			{
-				double* pOutParameters = NULL;
+				Math_Parameter* pOutParameters2 = NULL;
 				int iParameterCount = 0;
 
 				double dProcValue = 0;
 				MathResult result = ResultOk;
 
-				if ((result = ParseMethodParameters(sSource, iSourceSz, &iRPos, &pOutParameters, &iParameterCount)) != ResultOk)
+				if ((result = ParseMethodParameters(sSource, iSourceSz, &iRPos, &pOutParameters2, &iParameterCount)) != ResultOk)
 				{
 					return result;
 				}
 
-				if ((result = ExecuteNativeMethod(sBuf, pOutParameters, iParameterCount, &dProcValue)) != ResultOk)
+				if ((result = ExecuteNativeMethod(sBuf, pOutParameters2, iParameterCount, &dProcValue)) != ResultOk)
 				{
 					return result;
 				}
@@ -1432,13 +1476,26 @@ CMathParser::MathResult CMathParser::ParseMethodParameters(
 
 		if (iParenNestLevel == 0 || sSource[iRPos] == ',')
 		{
-			*pOutParameters = (double*)realloc(*pOutParameters, sizeof(double) * (iParameters + 1));
+			*pOutParameters = (Math_Parameter*)realloc(*pOutParameters, sizeof(Math_Parameter) * (iParameters + 1));
 
 			sBuf[iWPos] = '\0';
-			double dResult = 0;
-			this->Calculate(sBuf, &dResult);
 
-			(*pOutParameters)[iParameters] = dResult;
+			if (sBuf[0] == '\'')
+			{
+				// parameter of string type
+				(*pOutParameters)[iParameters].Kind = Math_Parameter_Kind_String;
+				(*pOutParameters)[iParameters].StringValue = (char *)calloc(sizeof(char), iWPos - 1);
+				memcpy_s((*pOutParameters)[iParameters].StringValue, iWPos - 2, &sBuf[1], iWPos - 2);
+				(*pOutParameters)[iParameters].StringValue[iWPos - 2] = '\0';
+			}
+			else
+			{
+				double dResult = 0;
+				this->Calculate(sBuf, &dResult);
+
+				(*pOutParameters)[iParameters].Kind = Math_Parameter_Kind_Double;
+				(*pOutParameters)[iParameters].DoubleValue = dResult;
+			}
 
 			iParameters++;
 
@@ -1727,6 +1784,7 @@ bool CMathParser::IsValidVariableChar(const char cChar)
 	return IsNumeric(cChar)
 		|| (cChar >= 'a' && cChar <= 'z')
 		|| (cChar >= 'A' && cChar <= 'Z')
+		|| cChar == '\''
 		|| cChar == '_';
 }
 

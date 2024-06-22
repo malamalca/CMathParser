@@ -8,6 +8,17 @@
 #define CMATHPARSER_MAX_VAR_LENGTH    128
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+enum Math_Parameter_Kind {
+	Math_Parameter_Kind_Double,
+	Math_Parameter_Kind_String,
+};
+
+struct Math_Parameter {
+	Math_Parameter_Kind Kind;
+	char* StringValue;
+	double DoubleValue;
+};
+
 
 class CMathParser {
 private:
@@ -45,7 +56,7 @@ public:
 	/// <param name="iParamCount">Count of the parameters being passed to the method.</param>
 	/// <param name="pOutResult">Pointer for pushing resulting value back to the engine.</param>
 	/// <returns></returns>
-	typedef bool (*TMethodCallback)(CMathParser* pParser, const char* sMethodName, double* dParameters, int iParamCount, double* pOutResult);
+	typedef bool (*TMethodCallback)(CMathParser* pParser, const char* sMethodName, Math_Parameter* dParameters, int iParamCount, double* pOutResult);
 
 	enum MathResult {
 		ResultFoundNegative = -1,
@@ -125,8 +136,8 @@ private:
 	MathResult GetRightNumber(MATHEXPRESSION *pExp, int iStartPos, char *sOutVal, int iMaxSz, int *iOutSz, int *iEnd);
 	MathResult GetSubExpression(MATHINSTANCE *pInst, int *iBegin, int *iEnd);
 	MathResult ParseOperator(MATHINSTANCE *pInst, MATHEXPRESSION *pExp, const char *sOp, int iOpPos, int iOpSz);
-	MathResult ExecuteNativeMethod(const char* sMethodName, double* dParameters, int iParamCount, double* pOutResult);
-	MathResult ParseMethodParameters(const char* sSource, int iSourceSz, int* piRPos, double** pOutParameters, int* piOutParamCount);
+	MathResult ExecuteNativeMethod(const char* sMethodName, Math_Parameter* dParameters, int iParamCount, double* pOutResult);
+	MathResult ParseMethodParameters(const char* sSource, int iSourceSz, int* piRPos, Math_Parameter** pOutParameters, int* piOutParamCount);
 
 	int GetFreestandingNotOperation(MATHEXPRESSION *pExp);
 	int GetFirstOrderOperation(MATHEXPRESSION *pExp);

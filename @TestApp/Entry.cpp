@@ -88,7 +88,7 @@ bool VariableCallback(CMathParser* pParser, const char* sVarName, double* dRetur
 /// <param name="iParamCount">Count of the parameters being passed to the method.</param>
 /// <param name="pOutResult">Pointer for pushing resulting value back to the engine.</param>
 /// <returns></returns>
-bool MethodCallback(CMathParser* pParser, const char* sMethodName, double* dParameters, int iParamCount, double* pOutResult)
+bool MethodCallback(CMathParser* pParser, const char* sMethodName, Math_Parameter* dParameters, int iParamCount, double* pOutResult)
 {
 	if (_strcmpi(sMethodName, "DivideSumBy2") == 0 && iParamCount > 0)
 	{
@@ -96,12 +96,21 @@ bool MethodCallback(CMathParser* pParser, const char* sMethodName, double* dPara
 
 		for (int i = 0; i < iParamCount; i++)
 		{
-			result += dParameters[i]; //Sum all of the parameters.
+			result += dParameters[i].DoubleValue; //Sum all of the parameters.
 		}
 
 		result /= 2;
 
 		*pOutResult = result; //Pass the result back to the parser engine.
+
+		return true;
+	}
+	if (_strcmpi(sMethodName, "strpar") == 0 && iParamCount > 0)
+	{
+		double result = 1000;
+		*pOutResult = result; //Pass the result back to the parser engine.
+
+		printf("%s\n", dParameters[0].StringValue);
 
 		return true;
 	}
@@ -239,6 +248,8 @@ int main(int argc, char *argv[])
 	CheckResult("!10+10-1", 9);
 	CheckResult("10+10-!1", 20);
 	CheckResult("X + Y", 1000);
+
+	CheckResult("strpar('1000')", 1000);
 
 #if defined (_WIN32)
 	system("pause");
