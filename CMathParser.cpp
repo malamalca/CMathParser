@@ -1422,7 +1422,8 @@ CMathParser::MathResult CMathParser::ParseMethodParameters(
 
 	for (; iRPos < iSourceSz; iRPos++)
 	{
-		if (IsWhiteSpace(sSource[iRPos]))
+		// skip white space only if not string parameter
+		if (IsWhiteSpace(sSource[iRPos]) && !(sBuf[0] == '\''))
 		{
 			continue;
 		}

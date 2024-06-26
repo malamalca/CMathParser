@@ -250,6 +250,7 @@ int main(int argc, char *argv[])
 	CheckResult("X + Y", 1000);
 
 	CheckResult("strpar('1000')", 1000);
+	CheckResult("strpar('10 00')", 1000);
 
 #if defined (_WIN32)
 	system("pause");
