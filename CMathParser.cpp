@@ -122,6 +122,7 @@ const char* sNativeMethods[] =
 	"POW",
 	"FLOOR",
 	"CEIL",
+	"ROUND",
 	"NOT",
 	"AVG",
 	"SUM",
@@ -1362,6 +1363,15 @@ CMathParser::MathResult CMathParser::ExecuteNativeMethod(
 		}
 
 		*pOutResult = ceil(dParameters[0].DoubleValue);
+	}
+	else if (_strcmpi(sMethodName, "ROUND") == 0)
+	{
+		if (iParamCount != 2)
+		{
+			return this->SetError(ResultInvalidToken, "Invalid number of parameters passed to method: %s", sMethodName);
+		}
+
+		*pOutResult = round(dParameters[0].DoubleValue / dParameters[1].DoubleValue) * dParameters[1].DoubleValue;
 	}
 	else if (_strcmpi(sMethodName, "SUM") == 0)
 	{
