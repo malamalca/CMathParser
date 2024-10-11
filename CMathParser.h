@@ -113,6 +113,9 @@ public:
 	TDebugTextCallback GetDebugCallback(void);
 	TDebugTextCallback SetDebugCallback(TDebugTextCallback procPtr);
 
+	void SetDecimalSeparator(char newSeparator);
+	void SetParameterSeparator(char newSeparator);
+
 	bool DebugMode(bool bDebugMode);
 	bool DebugMode(void);
 	MATHERRORINFO *LastError(void);
@@ -120,6 +123,10 @@ public:
 private:
 	bool cbDebugMode;
 	short ciPrecision;
+
+	char decimalSeparator = '.';
+	char parameterSeparator = ',';
+
 	MATHERRORINFO LastErrorInfo;
 	TVariableSetCallback pVariableSetProc;
 	TMethodCallback pMethodProc;

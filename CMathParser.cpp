@@ -7,6 +7,7 @@
 #include <math.h>
 #include <float.h>
 #include <limits.h>
+#include <locale.h>
 
 #if defined (_WIN32)
 
@@ -20,9 +21,9 @@
 
 // Windows-specific functions
 #define _strcmpi strcasecmp
-// convert float to string, use analagous POSIX function, just with different args order
 
-int fcvt_r(double value, int ndigit, int *decpt, int *sign, char buf[], int sz) {
+// convert float to string, use analagous POSIX function, just with different args order
+int fcvt_r(double value, int ndigit, int *decpt, int *sign, char buf[], int sz, char decimalSeparator = '.') {
   char *ret = &buf[0];
   if (ndigit < 0)
     ndigit = 0;
@@ -39,7 +40,7 @@ int fcvt_r(double value, int ndigit, int *decpt, int *sign, char buf[], int sz) 
       ++ret;
     }
     *decpt = 0;
-    char *pt = strchr(ret, '.');
+    char *pt = strchr(ret, decimalSeparator);
     if (pt) {
       *decpt = pt - ret;
       memmove(pt, pt + 1, strlen(pt + 1) + 1);
@@ -229,7 +230,7 @@ int CMathParser::SmartRound(double dValue, char *sOut, int iMaxOutSz)
 	{
 		return -1;
 	}
-	int iDecPos = InStr(".", sVal, iValLen, 0);
+	int iDecPos = InStr(&this->decimalSeparator, sVal, iValLen, 0);
 
 	if (iDecPos < 0)
 	{
@@ -285,7 +286,7 @@ int CMathParser::SmartRound(double dValue, char *sOut, int iMaxOutSz)
 			iSz--;
 		}
 
-		if (sOut[iSz] == '.')
+		if (sOut[iSz] == this->decimalSeparator)
 		{
 			iSz--;
 		}
@@ -336,7 +337,8 @@ int CMathParser::DoubleToChar(double dVal, char *sOut, int iMaxOutSz)
 	if (iDecPos <= 0)
 	{
 		sOut[iWPos++] = '0';
-		sOut[iWPos++] = '.';
+		sOut[iWPos++] = this->decimalSeparator;
+		
 		while (iDecPos < 0)
 		{
 			sOut[iWPos++] = '0';
@@ -349,7 +351,7 @@ int CMathParser::DoubleToChar(double dVal, char *sOut, int iMaxOutSz)
 	{
 		if (iRPos == iDecPos)
 		{
-			sOut[iWPos++] = '.';
+			sOut[iWPos++] = this->decimalSeparator;
 		}
 		sOut[iWPos++] = sVal[iRPos];
 	}
@@ -357,12 +359,12 @@ int CMathParser::DoubleToChar(double dVal, char *sOut, int iMaxOutSz)
 	if (sOut[iWPos - 1] == '0')
 	{
 		iWPos--;
-		while (iWPos > 2 && sOut[iWPos] == '0' && sOut[iWPos - 1] != '.')
+		while (iWPos > 2 && sOut[iWPos] == '0' && sOut[iWPos - 1] != this->decimalSeparator)
 		{
 			iWPos--;
 		}
 
-		if (sOut[iWPos] == '.')
+		if (sOut[iWPos] == this->decimalSeparator)
 		{
 			iWPos--;
 		}
@@ -415,7 +417,7 @@ CMathParser::MathResult CMathParser::GetLeftNumber(MATHEXPRESSION *pExp, int iSt
 				break;
 			}
 		}
-		else if (!IsNumeric(pExp->Text[iRPos]) && pExp->Text[iRPos] != '.')
+		else if (!IsNumeric(pExp->Text[iRPos]) && pExp->Text[iRPos] != this->decimalSeparator)
 		{
 			return this->SetError(ResultInvalidToken, "Token is invalid: %c", pExp->Text[iRPos]);
 		}
@@ -467,7 +469,7 @@ CMathParser::MathResult CMathParser::GetRightNumber(MATHEXPRESSION *pExp, int iS
 				break;
 			}
 		}
-		else if (!IsNumeric(pExp->Text[iRPos]) && pExp->Text[iRPos] != '.')
+		else if (!IsNumeric(pExp->Text[iRPos]) && pExp->Text[iRPos] != this->decimalSeparator)
 		{
 			return this->SetError(ResultInvalidToken, "Token is invalid: %c", pExp->Text[iRPos]);
 		}
@@ -579,7 +581,7 @@ CMathParser::MathResult CMathParser::ParseOperator(MATHINSTANCE *pInst, MATHEXPR
 
 			iValSz = (int)strlen(sVal);
 
-			if (sVal[iValSz - 1] == '.')
+			if (sVal[iValSz - 1] == this->decimalSeparator)
 			{
 				iValSz--;
 				sVal[iValSz] = '\0';
@@ -1086,7 +1088,7 @@ CMathParser::MathResult CMathParser::AllocateExpression(MATHEXPRESSION* pExp, co
 					//Convert double to string (must be a faster way, but this is just super safe and doesn't create infinite repeating patterns).
 					//TODO: Fixed percision of 8 on variables seems inflexible.
 					int iVarValLength = sprintf_s(sVarValue, sizeof(sVarValue), "%.8f", dProcValue);
-
+					
 					if (pExp->Length + iVarValLength + iSourceSz >= pExp->Allocated)
 					{
 						//Adding [iSourceSz] so that the remainder of the expression can be stored without allocating again (unless we encounter more vars).
@@ -1476,7 +1478,7 @@ CMathParser::MathResult CMathParser::ParseMethodParameters(
 			iParenNestLevel--;
 		}
 
-		if (sSource[iRPos] == ',')
+		if (sSource[iRPos] == this->parameterSeparator)
 		{
 
 		}
@@ -1485,7 +1487,7 @@ CMathParser::MathResult CMathParser::ParseMethodParameters(
 			sBuf[iWPos++] = sSource[iRPos];
 		}
 
-		if (iParenNestLevel == 0 || sSource[iRPos] == ',')
+		if (iParenNestLevel == 0 || sSource[iRPos] == this->parameterSeparator)
 		{
 			*pOutParameters = (Math_Parameter*)realloc(*pOutParameters, sizeof(Math_Parameter) * (iParameters + 1));
 
@@ -1510,7 +1512,7 @@ CMathParser::MathResult CMathParser::ParseMethodParameters(
 
 			iParameters++;
 
-			if (sSource[iRPos] == ',')
+			if (sSource[iRPos] == this->parameterSeparator)
 			{
 				iWPos = 0; //Reset for the next parameter.
 				memset(sBuf, 0, sizeof(sBuf));
@@ -1604,6 +1606,7 @@ CMathParser::MathResult CMathParser::CalculateComplexExpression(MATHINSTANCE *pI
 			}
 			else {
 				sprintf_s(sVal, sizeof(sVal), "%.*g", this->ciPrecision, pInst->RunningTotal);
+
 				/*
 				if(_gcvt_s(sVal, sizeof(sVal), pInst->RunningTotal, this->ciPrecision) != 0)
 				{
@@ -1615,7 +1618,7 @@ CMathParser::MathResult CMathParser::CalculateComplexExpression(MATHINSTANCE *pI
 
 			iValSz = (int)strlen(sVal);
 
-			if (sVal[iValSz - 1] == '.')
+			if (sVal[iValSz - 1] == this->decimalSeparator)
 			{
 				iValSz--;
 				sVal[iValSz] = '\0';
@@ -1785,7 +1788,7 @@ bool CMathParser::IsMathChar(const char cChar)
 
 bool CMathParser::IsValidChar(const char cChar)
 {
-	return IsNumeric(cChar) || this->IsMathChar(cChar) || cChar == '.' || cChar == '(' || cChar == ')';
+	return IsNumeric(cChar) || this->IsMathChar(cChar) || cChar == this->decimalSeparator || cChar == '(' || cChar == ')';
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2096,6 +2099,13 @@ CMathParser::CMathParser(short iPrecision)
 	this->Precision(iPrecision);
 	this->pDebugProc = NULL;
 	this->cbDebugMode = false;
+
+	struct lconv * lc;
+	lc = localeconv();
+	this->SetDecimalSeparator(lc->decimal_point[0]);
+	if (strcmp(".", lc->decimal_point) != 0) {
+		this->SetParameterSeparator(';');
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2106,6 +2116,13 @@ CMathParser::CMathParser(void)
 	this->Precision(CMATHPARSER_DEFAULT_PRECISION);
 	this->pDebugProc = NULL;
 	this->cbDebugMode = false;
+
+	struct lconv * lc;
+	lc = localeconv();
+	this->SetDecimalSeparator(lc->decimal_point[0]);
+	if (strcmp(".", lc->decimal_point) != 0) {
+		this->SetParameterSeparator(';');
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2199,6 +2216,16 @@ CMathParser::TDebugTextCallback CMathParser::SetDebugCallback(TDebugTextCallback
 	TDebugTextCallback oldProcPtr = this->pDebugProc;
 	this->pDebugProc = procPtr;
 	return oldProcPtr;
+}
+
+void CMathParser::SetDecimalSeparator(char newSeparator)
+{
+	this->decimalSeparator = newSeparator;
+}
+
+void CMathParser::SetParameterSeparator(char newSeparator)
+{
+	this->parameterSeparator = newSeparator;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2315,7 +2342,7 @@ bool CMathParser::IsNumeric(const char *sText, int iLength)
 	{
 		if (!IsNumeric(sText[iRPos]))
 		{
-			if (sText[iRPos] == '.')
+			if (sText[iRPos] == this->decimalSeparator)
 			{
 				if (iRPos == iLength - 1) //Decimal cannot be the last character.
 				{
